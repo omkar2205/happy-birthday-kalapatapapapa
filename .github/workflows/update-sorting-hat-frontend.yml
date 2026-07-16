@@ -18,43 +18,34 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('index.html')
           text = path.read_text(encoding='utf-8')
 
-          public_prompt = '''  // Sent to Groq as the system prompt when PROXY_URL is set.
-          hatSystemPrompt:
-            "You are the Sorting Hat from Hogwarts, speaking directly to a witch named Poornima on her birthday. " +
-            "Voice: wise, theatrical, a touch grumpy, warm underneath, and quick with a tease. Keep replies SHORT — 1 to 3 sentences. " +
-            "Never break character or mention being an AI. What you know about her: she is deeply kind and selfless, always putting others above herself; " +
-            "she is from Vijayawada and now lives in Hyderabad; she works alongside her friend Omkar, who made this for her (she joined his team on 14 March 2024); " +
-            "she is a vegetarian who nonetheless happily eats cake made with egg (a running joke — tease her fondly about it); she loves colouring books and simple artwork; " +
-            "and she is, without question, a Gryffindor. If it fits, wish her a happy birthday. Be affectionate, funny, and brief. Do not invent specific facts you weren't given.",
-
-          '''
-
-          if public_prompt not in text:
+          text, prompt_count = re.subn(
+              r'\n  // Sent to Groq as the system prompt when PROXY_URL is set\.\n  hatSystemPrompt:.*?\n\n  // Used when PROXY_URL is empty',
+              '\n\n  // Used when PROXY_URL is empty',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if prompt_count != 1:
               raise SystemExit('Public system prompt block was not found')
-          text = text.replace(public_prompt, '', 1)
 
-          old_state = '''let hatOpened = false;
-          let hatHistory = [{ role:'system', content: CONFIG.hatSystemPrompt }];
-          let typing = false;'''
-          new_state = '''let hatOpened = false;
-          let hatHistory = [];
-          let typing = false;
-          let hatThinking = false;'''
+          old_state = "let hatOpened = false;\nlet hatHistory = [{ role:'system', content: CONFIG.hatSystemPrompt }];\nlet typing = false;"
+          new_state = "let hatOpened = false;\nlet hatHistory = [];\nlet typing = false;\nlet hatThinking = false;"
           if old_state not in text:
               raise SystemExit('Sorting Hat state block was not found')
           text = text.replace(old_state, new_state, 1)
 
           old_push = "function pushHat(role, content){ hatHistory.push({role, content}); if(hatHistory.length>14) hatHistory.splice(1,2); }"
-          new_push = '''function pushHat(role, content){
+          new_push = """function pushHat(role, content){
             hatHistory.push({ role, content });
             if(hatHistory.length > 12){
               hatHistory.splice(0, hatHistory.length - 12);
             }
-          }'''
+          }"""
           if old_push not in text:
               raise SystemExit('pushHat function was not found')
           text = text.replace(old_push, new_push, 1)
@@ -66,7 +57,7 @@ jobs:
           if start == -1 or end == -1:
               raise SystemExit('askHat function boundaries were not found')
 
-          new_ask = '''async function askHat(text){
+          new_ask = """async function askHat(text){
             if(!text || typing || hatThinking) return;
 
             hatThinking = true;
@@ -81,7 +72,7 @@ jobs:
             micButton.disabled = true;
 
             $('hatSpeech').className = 'hat-speech';
-            $('hatSpeech').innerHTML = '<span style="opacity:.6">the Hat considers&hellip;</span>';
+            $('hatSpeech').innerHTML = '<span style=\"opacity:.6\">the Hat considers&hellip;</span>';
             $('hatStatus').textContent = 'consulting the old magic…';
 
             pushHat('user', text);
@@ -117,7 +108,7 @@ jobs:
               $('hatStatus').textContent = SR ? 'type, or tap the mic to speak' : 'type to the Hat below';
               input.focus();
             });
-          }'''
+          }"""
 
           text = text[:start] + new_ask + text[end:]
           path.write_text(text, encoding='utf-8')
