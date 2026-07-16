@@ -355,50 +355,50 @@ const CONFIG = {
   PROXY_URL: "https://script.google.com/macros/s/AKfycbzzyzpZ_sc1VqofE12yvaEEzVdKOZbQgVN8fjg-6yWUy3EcsYzDuKalp3FuJFn55BN-/exec",
 
   mapName: "Poornima's Map",
-  mapSub: "drawn in ink and mischief \u2014 every place her heart has wandered, 1996 to now",
+  mapSub: "",
 
-  // The stops the footprints walk through. x,y are on a 1000\u00d7640 canvas.
+  // The stops the footprints walk through. x,y are on a 1000×640 canvas.
   stops: [
     { x:150, y:170, place:"Godric's Hollow", year:"1996", label:"below",
-      note:"Vijayawada. Home \u2014 where she grew up, went to school, and first learned to put everyone ahead of herself. (Named for a certain brave Gryffindor, naturally.)" },
-    { x:330, y:430, place:"The Forbidden Forest", year:"2019\u20132024", label:"above",
-      note:"Five long years in the deep woods. It tested her patience and gave back precious little \u2014 yet she walked the whole way through without once losing her kindness. That's the real trick of it." },
+      note:"Vijayawada. Home — where she grew up, went to school, and first learned to put everyone ahead of herself. (Named for a certain brave Gryffindor, naturally.)" },
+    { x:330, y:430, place:"The Forbidden Forest", year:"2019–2024", label:"above",
+      note:"Five long years in the deep woods. It tested her patience and gave back precious little — yet she walked the whole way through without once losing her kindness. That's the real trick of it." },
     { x:545, y:190, place:"Diagon Alley", year:"2024", label:"below",
       note:"A new city, a wider world. She packed up and stepped into somewhere bigger and braver. Far braver than it looks from the outside." },
     { x:740, y:450, place:"Gryffindor Common Room", year:"14 March 2024", label:"above",
-      note:"The day she found her people. She joined the team \u2014 and a certain map-maker got a friend for life." },
+      note:"The day she found her people. She joined the team — and a certain map-maker got a friend for life." },
     { x:890, y:210, place:"You Are Here", year:"2026", label:"below", here:true, letter:true,
-      note:"Present day. Older today \u2014 and still, stubbornly, pretending she isn't the strongest person in the room." }
+      note:"Present day. Older today — and still, stubbornly, pretending she isn't the strongest person in the room." }
   ],
 
   // The Hat's opening sorting speech (typed + spoken aloud).
-  hatMonologue: "Ahh\u2026 let me see. Courage \u2014 plenty of it, though you'd never say so. A sharp mind, kept quiet. A heart that puts everyone else first, every single time. But tell me\u2026 a vegetarian, are we? And yet\u2026 is that cake? With egg in it? The lengths some people will go to. Ha! I'll allow it \u2014 just this once. Now, where to put someone this brave and this kind\u2026 oh, but it's obvious, isn't it? Better be\u2026 GRYFFINDOR!",
+  hatMonologue: "Ahh… let me see. Courage — plenty of it, though you'd never say so. A sharp mind, kept quiet. A heart that puts everyone else first, every single time. But tell me… a vegetarian, are we? And yet… is that cake? With egg in it? The lengths some people will go to. Ha! I'll allow it — just this once. Now, where to put someone this brave and this kind… oh, but it's obvious, isn't it? Better be… GRYFFINDOR!",
 
   // Sent to Groq as the system prompt when PROXY_URL is set.
   hatSystemPrompt:
     "You are the Sorting Hat from Hogwarts, speaking directly to a witch named Poornima on her birthday. " +
-    "Voice: wise, theatrical, a touch grumpy, warm underneath, and quick with a tease. Keep replies SHORT \u2014 1 to 3 sentences. " +
+    "Voice: wise, theatrical, a touch grumpy, warm underneath, and quick with a tease. Keep replies SHORT — 1 to 3 sentences. " +
     "Never break character or mention being an AI. What you know about her: she is deeply kind and selfless, always putting others above herself; " +
     "she is from Vijayawada and now lives in Hyderabad; she works alongside her friend Omkar, who made this for her (she joined his team on 14 March 2024); " +
-    "she is a vegetarian who nonetheless happily eats cake made with egg (a running joke \u2014 tease her fondly about it); she loves colouring books and simple artwork; " +
+    "she is a vegetarian who nonetheless happily eats cake made with egg (a running joke — tease her fondly about it); she loves colouring books and simple artwork; " +
     "and she is, without question, a Gryffindor. If it fits, wish her a happy birthday. Be affectionate, funny, and brief. Do not invent specific facts you weren't given.",
 
   // Used when PROXY_URL is empty (the Hat still feels alive offline).
   hatFallbacks: [
-    "Hmph. Asking a hat for wisdom \u2014 bold of you. Very Gryffindor.",
+    "Hmph. Asking a hat for wisdom — bold of you. Very Gryffindor.",
     "A thousand years of students, and few with a heart as stubbornly selfless as yours. Do put yourself first once in a while.",
-    "Careful now \u2014 I know about the cake. The one with egg in it. Your secret is safe in my brim.",
+    "Careful now — I know about the cake. The one with egg in it. Your secret is safe in my brim.",
     "You'd sketch me if you had your colouring pencils, wouldn't you? I'd make a fine study, I think.",
     "Brave, kind, and far too modest about both. That's my final answer, and I've been right for a thousand years.",
     "The map can show you where you've been. Only your friends can tell you how far you've come.",
-    "Happy birthday, Poornima. Another year braver \u2014 and still pretending you aren't the best of them."
+    "Happy birthday, Poornima. Another year braver — and still pretending you aren't the best of them."
   ],
 
   // The letter (your words). Each string is a paragraph.
   howler: [
     "I hate doing celebrations and birthday wishes. I have many reasons for it. But I should never have let that come in the way of celebrating the birthday of one of the strongest women I have ever met.",
     "I'm glad I chose to do that one extra interview the day I first spoke to you.",
-    "You have always put everyone above yourself, always looking out for others \u2014 and that takes immense strength and courage. The silent sacrifices, the unknown compromises you've been making \u2014 all of it will be worth it, and the universe will settle its debt to you.",
+    "You have always put everyone above yourself, always looking out for others — and that takes immense strength and courage. The silent sacrifices, the unknown compromises you've been making — all of it will be worth it, and the universe will settle its debt to you.",
     "Happiest birthday to you! And although you are older than me, you will always be my little sister. <span class='heart'>&#9829;</span>"
   ]
 };
@@ -430,7 +430,7 @@ const norm = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' 
 $('sealLetter').textContent = CONFIG.initial;
 $('mapName').textContent = CONFIG.mapName;
 $('mapSub').textContent = CONFIG.mapSub;
-$('endSub').innerHTML = "\u2014 for " + CONFIG.name + ", with love";
+$('endSub').innerHTML = "— for " + CONFIG.name + ", with love";
 $('envSeal').textContent = CONFIG.initial;
 $('hatPerch').insertAdjacentHTML('afterbegin', HAT_SVG);
 $('hatVisual').innerHTML = HAT_SVG;
@@ -445,7 +445,7 @@ function trySpell(){
   if(checkSpell(v)){ openMap(); }
   else {
     $('spell').classList.remove('shake'); void $('spell').offsetWidth; $('spell').classList.add('shake');
-    $('hint').innerHTML = '<span style="color:var(--wax)">the parchment stays blank\u2026 the words aren\'t quite right.</span>';
+    $('hint').innerHTML = '<span style="color:var(--wax)">the parchment stays blank… the words aren\'t quite right.</span>';
   }
 }
 $('spell').addEventListener('keydown', e => { if(e.key==='Enter') trySpell(); });
@@ -467,7 +467,7 @@ function listen(btn, onText){
 }
 $('micGate').addEventListener('click', () => {
   const ok = listen($('micGate'), t => { $('spell').value = t; setTimeout(trySpell, 250); });
-  if(!ok){ $('hint').innerHTML = 'your spellbook won\'t listen here \u2014 best to type the words.'; }
+  if(!ok){ $('hint').innerHTML = 'your spellbook won\'t listen here — best to type the words.'; }
 });
 
 let voice = null;
@@ -632,7 +632,7 @@ $('hatSend').addEventListener('click', () => askHat($('hatInput').value.trim()))
 $('hatInput').addEventListener('keydown', e => { if(e.key==='Enter') askHat($('hatInput').value.trim()); });
 $('hatMic').addEventListener('click', () => {
   const ok = listen($('hatMic'), t => { $('hatInput').value = t; setTimeout(()=>askHat(t), 200); });
-  if(!ok){ $('hatStatus').textContent = 'the Hat can\'t hear here \u2014 type to it instead.'; }
+  if(!ok){ $('hatStatus').textContent = 'the Hat can\'t hear here — type to it instead.'; }
 });
 
 /* ---------- HOWLER / LETTER ---------- */
@@ -652,7 +652,7 @@ function openHowler(){
   $('envFlap').style.transform = reduce ? 'none' : 'rotateX(180deg)';
   $('envHint').style.opacity='0';
   const body = CONFIG.howler.map(p => `<p>${p}</p>`).join('') +
-    `<p class="sign">\u2014 ${CONFIG.fromName}</p>` +
+    `<p class="sign">— ${CONFIG.fromName}</p>` +
     `<button class="managed" id="managedBtn">mischief managed</button>`;
   setTimeout(() => {
     $('envelopeWrap').style.display='none';
