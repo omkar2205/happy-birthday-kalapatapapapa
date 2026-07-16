@@ -445,7 +445,7 @@ $('hintToggle')?.addEventListener('click', () => {
   $('hint').innerHTML = 'the old words are: <b>&ldquo;I solemnly swear that I am up to no good.&rdquo;</b>';
 });
 
-/* ---------- SPEECH (in + out) ---------- */
+/* ---------- SPEECH INPUT + GROQ VOICE ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 function listen(btn, onText){
   if(!SR){ return false; }
@@ -462,22 +462,84 @@ $('micGate').addEventListener('click', () => {
   if(!ok){ $('hint').innerHTML = 'your spellbook won\'t listen here — best to type the words.'; }
 });
 
-let voice = null;
-function pickVoice(){
-  const vs = speechSynthesis.getVoices();
-  voice = vs.find(v=>/en/i.test(v.lang) && /(daniel|male|uk english|arthur|george|fred)/i.test(v.name))
-       || vs.find(v=>/en-GB/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || vs[0] || null;
+let activeHatAudio = null;
+let activeHatAudioUrl = null;
+let audioSequenceId = 0;
+
+function stopHatAudio(){
+  audioSequenceId++;
+
+  if(activeHatAudio){
+    activeHatAudio.pause();
+    activeHatAudio.currentTime = 0;
+    activeHatAudio = null;
+  }
+
+  if(activeHatAudioUrl){
+    URL.revokeObjectURL(activeHatAudioUrl);
+    activeHatAudioUrl = null;
+  }
 }
-if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function speak(text){
-  if(!('speechSynthesis' in window)) return;
-  try{
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/GRYFFINDOR/,'Gryffindor!'));
-    if(voice) u.voice = voice;
-    u.pitch = 0.7; u.rate = 0.9; u.volume = 1;
-    speechSynthesis.speak(u);
-  }catch(_){}
+
+function base64ToAudioUrl(base64){
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for(let i = 0; i < binary.length; i++){
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return URL.createObjectURL(new Blob([bytes], { type:'audio/wav' }));
+}
+
+async function playHatAudioClips(clips){
+  if(!Array.isArray(clips) || clips.length === 0) return;
+
+  stopHatAudio();
+  const sequenceId = audioSequenceId;
+
+  for(const clip of clips){
+    if(sequenceId !== audioSequenceId) break;
+
+    const audioUrl = base64ToAudioUrl(clip);
+    const audio = new Audio(audioUrl);
+    audio.preload = 'auto';
+    audio.playsInline = true;
+
+    activeHatAudio = audio;
+    activeHatAudioUrl = audioUrl;
+
+    try{
+      await new Promise((resolve, reject) => {
+        audio.addEventListener('ended', resolve, { once:true });
+        audio.addEventListener('error', reject, { once:true });
+        const playPromise = audio.play();
+        if(playPromise) playPromise.catch(reject);
+      });
+    }catch(error){
+      console.error('Sorting Hat audio could not play:', error);
+      break;
+    }finally{
+      URL.revokeObjectURL(audioUrl);
+      if(activeHatAudioUrl === audioUrl) activeHatAudioUrl = null;
+      if(activeHatAudio === audio) activeHatAudio = null;
+    }
+  }
+}
+
+async function requestHatSpeech(text){
+  if(!CONFIG.PROXY_URL || !text) return;
+
+  const response = await fetch(CONFIG.PROXY_URL, {
+    method:'POST',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body:JSON.stringify({ action:'tts', text })
+  });
+
+  const data = await response.json();
+  if(data && Array.isArray(data.audio)){
+    await playHatAudioClips(data.audio);
+  }
 }
 
 /* ---------- REVEAL THE MAP ---------- */
@@ -579,7 +641,9 @@ $('hatPerch').addEventListener('click', () => {
   if(!hatOpened){
     hatOpened = true;
     $('hatStatus').textContent = CONFIG.PROXY_URL ? '' : '';
-    speak(CONFIG.hatMonologue);
+    requestHatSpeech(CONFIG.hatMonologue).catch(error => {
+      console.error('Opening Sorting Hat speech failed:', error);
+    });
     // type in two beats so "GRYFFINDOR" lands
     const mono = CONFIG.hatMonologue;
     typeInto($('hatSpeech'), mono, {}, () => {
@@ -622,6 +686,7 @@ async function askHat(text){
 
   pushHat('user', text);
   let reply = '';
+  let replyAudio = [];
 
   if(CONFIG.PROXY_URL){
     try{
@@ -633,6 +698,7 @@ async function askHat(text){
 
       const data = await response.json();
       reply = data && data.reply ? String(data.reply).trim() : '';
+      replyAudio = data && Array.isArray(data.audio) ? data.audio : [];
     }catch(error){
       console.error('Sorting Hat request failed:', error);
     }
@@ -643,7 +709,9 @@ async function askHat(text){
   }
 
   pushHat('assistant', reply);
-  speak(reply);
+  playHatAudioClips(replyAudio).catch(error => {
+    console.error('Sorting Hat reply audio failed:', error);
+  });
 
   typeInto($('hatSpeech'), reply, {}, () => {
     hatThinking = false;
@@ -705,7 +773,10 @@ $('replay').addEventListener('click', () => location.reload());
 
 /* ---------- overlay plumbing ---------- */
 function show(id){ $(id).classList.add('open'); }
-function hide(id){ $(id).classList.remove('open'); }
+function hide(id){
+  $(id).classList.remove('open');
+  if(id === 'hatOverlay') stopHatAudio();
+}
 document.querySelectorAll('[data-close]').forEach(b =>
   b.addEventListener('click', () => hide(b.getAttribute('data-close'))));
 document.querySelectorAll('.overlay').forEach(o =>
