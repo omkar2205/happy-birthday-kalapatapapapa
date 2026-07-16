@@ -374,14 +374,6 @@ const CONFIG = {
   // The Hat's opening sorting speech (typed + spoken aloud).
   hatMonologue: "Ahh… let me see. Courage — plenty of it, though you'd never say so. A sharp mind, kept quiet. A heart that puts everyone else first, every single time. But tell me… a vegetarian, are we? And yet… is that cake? With egg in it? The lengths some people will go to. Ha! I'll allow it — just this once. Now, where to put someone this brave and this kind… oh, but it's obvious, isn't it? Better be… GRYFFINDOR!",
 
-  // Sent to Groq as the system prompt when PROXY_URL is set.
-  hatSystemPrompt:
-    "You are the Sorting Hat from Hogwarts, speaking directly to a witch named Poornima on her birthday. " +
-    "Voice: wise, theatrical, a touch grumpy, warm underneath, and quick with a tease. Keep replies SHORT — 1 to 3 sentences. " +
-    "Never break character or mention being an AI. What you know about her: she is deeply kind and selfless, always putting others above herself; " +
-    "she is from Vijayawada and now lives in Hyderabad; she works alongside her friend Omkar, who made this for her (she joined his team on 14 March 2024); " +
-    "she is a vegetarian who nonetheless happily eats cake made with egg (a running joke — tease her fondly about it); she loves colouring books and simple artwork; " +
-    "and she is, without question, a Gryffindor. If it fits, wish her a happy birthday. Be affectionate, funny, and brief. Do not invent specific facts you weren't given.",
 
   // Used when PROXY_URL is empty (the Hat still feels alive offline).
   hatFallbacks: [
@@ -559,8 +551,9 @@ function openNote(s){
 
 /* ---------- SORTING HAT ---------- */
 let hatOpened = false;
-let hatHistory = [{ role:'system', content: CONFIG.hatSystemPrompt }];
+let hatHistory = [];
 let typing = false;
+let hatThinking = false;
 
 function typeInto(el, text, {italic=true, cls=''}={}, done){
   typing = true;
@@ -602,30 +595,64 @@ function enableChat(){
   $('hatStatus').textContent = SR ? 'type, or tap the mic to speak' : 'type to the Hat below';
 }
 
-function pushHat(role, content){ hatHistory.push({role, content}); if(hatHistory.length>14) hatHistory.splice(1,2); }
+function pushHat(role, content){
+  hatHistory.push({ role, content });
+  if(hatHistory.length > 12){
+    hatHistory.splice(0, hatHistory.length - 12);
+  }
+}
 
 async function askHat(text){
-  if(!text || typing) return;
-  $('hatInput').value = '';
+  if(!text || typing || hatThinking) return;
+
+  hatThinking = true;
+
+  const input = $('hatInput');
+  const sendButton = $('hatSend');
+  const micButton = $('hatMic');
+
+  input.value = '';
+  input.disabled = true;
+  sendButton.disabled = true;
+  micButton.disabled = true;
+
   $('hatSpeech').className = 'hat-speech';
   $('hatSpeech').innerHTML = '<span style="opacity:.6">the Hat considers&hellip;</span>';
+  $('hatStatus').textContent = 'consulting the old magic…';
+
   pushHat('user', text);
-  let reply;
+  let reply = '';
+
   if(CONFIG.PROXY_URL){
     try{
-      const r = await fetch(CONFIG.PROXY_URL, {
-        method:'POST',
-        headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      const response = await fetch(CONFIG.PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ messages: hatHistory })
       });
-      const data = await r.json();
-      reply = (data && data.reply) ? String(data.reply).trim() : null;
-    }catch(_){ reply = null; }
+
+      const data = await response.json();
+      reply = data && data.reply ? String(data.reply).trim() : '';
+    }catch(error){
+      console.error('Sorting Hat request failed:', error);
+    }
   }
-  if(!reply){ reply = CONFIG.hatFallbacks[Math.floor(Math.random()*CONFIG.hatFallbacks.length)]; }
+
+  if(!reply){
+    reply = CONFIG.hatFallbacks[Math.floor(Math.random() * CONFIG.hatFallbacks.length)];
+  }
+
   pushHat('assistant', reply);
   speak(reply);
-  typeInto($('hatSpeech'), reply, {});
+
+  typeInto($('hatSpeech'), reply, {}, () => {
+    hatThinking = false;
+    input.disabled = false;
+    sendButton.disabled = false;
+    micButton.disabled = false;
+    $('hatStatus').textContent = SR ? 'type, or tap the mic to speak' : 'type to the Hat below';
+    input.focus();
+  });
 }
 
 $('hatSend').addEventListener('click', () => askHat($('hatInput').value.trim()));
