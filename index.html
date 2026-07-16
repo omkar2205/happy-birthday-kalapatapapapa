@@ -462,26 +462,49 @@ $('micGate').addEventListener('click', () => {
   if(!ok){ $('hint').innerHTML = 'your spellbook won\'t listen here — best to type the words.'; }
 });
 
-let activeHatAudio = null;
-let activeHatAudioUrl = null;
+const HatAudioContext = window.AudioContext || window.webkitAudioContext;
+let hatAudioContext = null;
+let activeHatSource = null;
 let audioSequenceId = 0;
+
+function getHatAudioContext(){
+  if(!HatAudioContext) return null;
+  if(!hatAudioContext) hatAudioContext = new HatAudioContext();
+  return hatAudioContext;
+}
+
+function unlockHatAudio(){
+  const context = getHatAudioContext();
+  if(!context) return;
+
+  if(context.state === 'suspended'){
+    context.resume().catch(error => {
+      console.error('Sorting Hat audio could not be unlocked:', error);
+    });
+  }
+
+  try{
+    const silentBuffer = context.createBuffer(1, 1, 22050);
+    const silentSource = context.createBufferSource();
+    silentSource.buffer = silentBuffer;
+    silentSource.connect(context.destination);
+    silentSource.start(0);
+  }catch(error){
+    console.error('Sorting Hat audio unlock failed:', error);
+  }
+}
 
 function stopHatAudio(){
   audioSequenceId++;
 
-  if(activeHatAudio){
-    activeHatAudio.pause();
-    activeHatAudio.currentTime = 0;
-    activeHatAudio = null;
-  }
-
-  if(activeHatAudioUrl){
-    URL.revokeObjectURL(activeHatAudioUrl);
-    activeHatAudioUrl = null;
+  if(activeHatSource){
+    try{ activeHatSource.stop(0); }catch(_){}
+    try{ activeHatSource.disconnect(); }catch(_){}
+    activeHatSource = null;
   }
 }
 
-function base64ToAudioUrl(base64){
+function base64ToArrayBuffer(base64){
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
 
@@ -489,11 +512,38 @@ function base64ToAudioUrl(base64){
     bytes[i] = binary.charCodeAt(i);
   }
 
-  return URL.createObjectURL(new Blob([bytes], { type:'audio/wav' }));
+  return bytes.buffer;
+}
+
+function decodeHatAudio(context, arrayBuffer){
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const succeed = value => {
+      if(!settled){ settled = true; resolve(value); }
+    };
+    const fail = error => {
+      if(!settled){ settled = true; reject(error); }
+    };
+
+    try{
+      const result = context.decodeAudioData(arrayBuffer.slice(0), succeed, fail);
+      if(result && typeof result.then === 'function'){
+        result.then(succeed, fail);
+      }
+    }catch(error){
+      fail(error);
+    }
+  });
 }
 
 async function playHatAudioClips(clips){
   if(!Array.isArray(clips) || clips.length === 0) return;
+
+  const context = getHatAudioContext();
+  if(!context) throw new Error('Web Audio is not supported in this browser.');
+
+  if(context.state === 'suspended') await context.resume();
+  if(context.state !== 'running') throw new Error('The browser did not allow audio playback.');
 
   stopHatAudio();
   const sequenceId = audioSequenceId;
@@ -501,29 +551,32 @@ async function playHatAudioClips(clips){
   for(const clip of clips){
     if(sequenceId !== audioSequenceId) break;
 
-    const audioUrl = base64ToAudioUrl(clip);
-    const audio = new Audio(audioUrl);
-    audio.preload = 'auto';
-    audio.playsInline = true;
+    const audioBuffer = await decodeHatAudio(
+      context,
+      base64ToArrayBuffer(clip)
+    );
 
-    activeHatAudio = audio;
-    activeHatAudioUrl = audioUrl;
+    if(sequenceId !== audioSequenceId) break;
 
-    try{
-      await new Promise((resolve, reject) => {
-        audio.addEventListener('ended', resolve, { once:true });
-        audio.addEventListener('error', reject, { once:true });
-        const playPromise = audio.play();
-        if(playPromise) playPromise.catch(reject);
-      });
-    }catch(error){
-      console.error('Sorting Hat audio could not play:', error);
-      break;
-    }finally{
-      URL.revokeObjectURL(audioUrl);
-      if(activeHatAudioUrl === audioUrl) activeHatAudioUrl = null;
-      if(activeHatAudio === audio) activeHatAudio = null;
-    }
+    await new Promise((resolve, reject) => {
+      const source = context.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(context.destination);
+      activeHatSource = source;
+
+      source.onended = () => {
+        if(activeHatSource === source) activeHatSource = null;
+        try{ source.disconnect(); }catch(_){}
+        resolve();
+      };
+
+      try{
+        source.start(0);
+      }catch(error){
+        if(activeHatSource === source) activeHatSource = null;
+        reject(error);
+      }
+    });
   }
 }
 
@@ -537,8 +590,14 @@ async function requestHatSpeech(text){
   });
 
   const data = await response.json();
-  if(data && Array.isArray(data.audio)){
+
+  if(data && Array.isArray(data.audio) && data.audio.length){
     await playHatAudioClips(data.audio);
+    return;
+  }
+
+  if(data && data.error){
+    console.error('Sorting Hat voice generation failed:', data.error);
   }
 }
 
@@ -637,6 +696,7 @@ function typeInto(el, text, {italic=true, cls=''}={}, done){
 }
 
 $('hatPerch').addEventListener('click', () => {
+  unlockHatAudio();
   show('hatOverlay');
   if(!hatOpened){
     hatOpened = true;
@@ -723,9 +783,18 @@ async function askHat(text){
   });
 }
 
-$('hatSend').addEventListener('click', () => askHat($('hatInput').value.trim()));
-$('hatInput').addEventListener('keydown', e => { if(e.key==='Enter') askHat($('hatInput').value.trim()); });
+$('hatSend').addEventListener('click', () => {
+  unlockHatAudio();
+  askHat($('hatInput').value.trim());
+});
+$('hatInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    unlockHatAudio();
+    askHat($('hatInput').value.trim());
+  }
+});
 $('hatMic').addEventListener('click', () => {
+  unlockHatAudio();
   const ok = listen($('hatMic'), t => { $('hatInput').value = t; setTimeout(()=>askHat(t), 200); });
   if(!ok){ $('hatStatus').textContent = 'the Hat can\'t hear here — type to it instead.'; }
 });
